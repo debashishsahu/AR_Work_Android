@@ -2,7 +2,12 @@ package com.example.debashish.arapplicationtemplate;
 
 import android.app.Activity;
 import android.hardware.Camera;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.SurfaceHolder;
@@ -13,30 +18,67 @@ import java.io.IOException;
 
 public class MainActivity extends Activity {
 
+    // variables declared for using the camera
     SurfaceView cameraPreview;
     SurfaceHolder previewHolder;
     Camera camera;
     boolean inPreview;
+
+    // variables declared for orientation sensor
+    final static String TAG = "PAAR";
+    SensorManager sensorManager;
+
+    int orientationSensor;
+    float headingAngle;
+    float pitchAngle;
+    float rollAngle;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // initialize and instantiate the variables
+        // initialize and instantiate the variables for camera
         inPreview = false;
 
         cameraPreview = (SurfaceView) findViewById(R.id.cameraPreview);
         previewHolder = cameraPreview.getHolder();
         previewHolder.addCallback(surfaceCallback);
         previewHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
+
+        // initialize and instantiate the variables for orientation sensor
+        sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        orientationSensor = Sensor.TYPE_ORIENTATION;
+        sensorManager.registerListener(sensorEventListener, sensorManager.getDefaultSensor(orientationSensor), SensorManager.SENSOR_DELAY_NORMAL);
     }
+
+    final SensorEventListener sensorEventListener = new SensorEventListener() {
+        @Override
+        public void onSensorChanged(SensorEvent event) {
+            if(event.sensor.getType() == Sensor.TYPE_ORIENTATION){
+                headingAngle = event.values[0];
+                pitchAngle = event.values[1];
+                rollAngle = event.values[2];
+
+                Log.d(TAG, "Heading: " + String.valueOf(headingAngle));
+                Log.d(TAG, "Pitch: " + String.valueOf(pitchAngle));
+                Log.d(TAG, "Roll: " + String.valueOf(rollAngle));
+            }
+        }
+
+        @Override
+        public void onAccuracyChanged(Sensor sensor, int accuracy) {
+            // not used
+        }
+    };
 
     @Override
     protected void onResume() {
         super.onResume();
 
         camera = Camera.open();
+
+        sensorManager.registerListener(sensorEventListener, sensorManager.getDefaultSensor(orientationSensor), SensorManager.SENSOR_DELAY_NORMAL);
     }
 
     @Override
@@ -48,6 +90,8 @@ public class MainActivity extends Activity {
         camera.release();
         camera = null;
         inPreview = false;
+
+        sensorManager.unregisterListener(sensorEventListener);
 
         super.onPause();
     }
