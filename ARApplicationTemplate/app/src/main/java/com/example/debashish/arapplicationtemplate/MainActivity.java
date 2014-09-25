@@ -6,6 +6,9 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -33,6 +36,18 @@ public class MainActivity extends Activity {
     float pitchAngle;
     float rollAngle;
 
+    // variables declared for accelerometer
+    int accelerometerSensor;
+    float xAxis;
+    float yAxis;
+    float zAxis;
+
+    // variables declared for GPS
+    LocationManager locationManager;
+    double latitude;
+    double longitude;
+    double altitude;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -50,7 +65,43 @@ public class MainActivity extends Activity {
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         orientationSensor = Sensor.TYPE_ORIENTATION;
         sensorManager.registerListener(sensorEventListener, sensorManager.getDefaultSensor(orientationSensor), SensorManager.SENSOR_DELAY_NORMAL);
+
+        // initialize and instantiate the variables for accelerometer sensor
+        accelerometerSensor = Sensor.TYPE_ACCELEROMETER;
+        sensorManager.registerListener(sensorEventListener, sensorManager.getDefaultSensor(accelerometerSensor), SensorManager.SENSOR_DELAY_NORMAL);
+
+        // initialize and instantiate the variables for GPS sensor
+        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000, 2, locationListener);
     }
+
+    LocationListener locationListener = new LocationListener() {
+        @Override
+        public void onLocationChanged(Location location) {
+            latitude = location.getLatitude();
+            longitude = location.getLongitude();
+            altitude = location.getAltitude();
+
+            Log.d(TAG, "Latitude: " + String.valueOf(latitude));
+            Log.d(TAG, "Longitude: " + String.valueOf(longitude));
+            Log.d(TAG, "Altitude: " + String.valueOf(altitude));
+        }
+
+        @Override
+        public void onStatusChanged(String provider, int status, Bundle extras) {
+            // not used
+        }
+
+        @Override
+        public void onProviderEnabled(String provider) {
+            // not used
+        }
+
+        @Override
+        public void onProviderDisabled(String provider) {
+            // not used
+        }
+    };
 
     final SensorEventListener sensorEventListener = new SensorEventListener() {
         @Override
@@ -63,6 +114,14 @@ public class MainActivity extends Activity {
                 Log.d(TAG, "Heading: " + String.valueOf(headingAngle));
                 Log.d(TAG, "Pitch: " + String.valueOf(pitchAngle));
                 Log.d(TAG, "Roll: " + String.valueOf(rollAngle));
+            } else if(event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+                xAxis = event.values[0];
+                yAxis = event.values[1];
+                zAxis = event.values[2];
+
+                Log.d(TAG, "X Axis: " + String.valueOf(xAxis));
+                Log.d(TAG, "Y Axis: " + String.valueOf(yAxis));
+                Log.d(TAG, "Z Axis: " + String.valueOf(zAxis));
             }
         }
 
@@ -79,6 +138,10 @@ public class MainActivity extends Activity {
         camera = Camera.open();
 
         sensorManager.registerListener(sensorEventListener, sensorManager.getDefaultSensor(orientationSensor), SensorManager.SENSOR_DELAY_NORMAL);
+
+        sensorManager.registerListener(sensorEventListener, sensorManager.getDefaultSensor(accelerometerSensor), SensorManager.SENSOR_DELAY_NORMAL);
+
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000, 2, locationListener);
     }
 
     @Override
@@ -91,6 +154,7 @@ public class MainActivity extends Activity {
         camera = null;
         inPreview = false;
 
+        locationManager.removeUpdates(locationListener);
         sensorManager.unregisterListener(sensorEventListener);
 
         super.onPause();
